@@ -2,37 +2,35 @@
 #include <omp.h>
 
 void division(int a, int b, int *resultado, int *resto) {
-    *resultado = 0;
-    *resto = a;
-    
-    int temp_resultado = 0;
-    int temp_resto = a;
+    int resultado_local = 0;
+    int resto_local = a;
 
-    #pragma omp parallel
+    // Reducción para combinar resultados locales de cada hilo
+    #pragma omp parallel reduction(+:resultado_local)
     {
-        int local_resultado = 0;
+        int brea = 0;
 
-        #pragma omp for reduction(+:temp_resultado)
-        for (int i = 0; i < a; i++)
-        {
-            if (temp_resto >= b)
+        while (!brea) {
+            // Sección crítica para modificar resto_local de manera segura
+            #pragma omp critical
             {
-                temp_resto = temp_resto - b;
-                local_resultado = local_resultado + 1;
+                if (resto_local >= b) {
+                    resto_local -= b;
+                    resultado_local++;
+                } else {
+                    brea = 1; 
+                }
             }
         }
-        
-        temp_resultado = temp_resultado + local_resultado;
     }
 
-    *resultado = temp_resultado;
-    *resto = temp_resto;
+    *resultado = resultado_local;
+    *resto = resto_local;
 }
 
-int main()
-{
-    int a= 50000000, b= 6,resultado,resto;
+int main() {
+    int a = 50000, b = 6, resultado, resto;
     division(a, b, &resultado, &resto);
-    printf("División de: %d / %d = %d  y resto: %d\n", a, b, resultado, resto);
-
+    printf("División de: %d / %d = %d y resto: %d\n", a, b, resultado, resto);
+    return 0;
 }
